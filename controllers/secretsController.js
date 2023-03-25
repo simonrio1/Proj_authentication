@@ -1,4 +1,5 @@
 const secretsServices = require("../services/secretsServices");
+const md5 = require("md5");
 
 exports.getHomePage = (req, res) => {
     res.render("home");
@@ -28,7 +29,7 @@ exports.register = async (req, res) => {
     try {
         const newUser = {
             email: req.body.username,
-            password: req.body.password
+            password: md5(req.body.password)
         };
         const user = await secretsServices.registerUser(newUser);
         res.redirect("/secrets");
@@ -41,7 +42,7 @@ exports.login = async (req, res) => {
     try {
 
         const email = req.body.username;
-        const password = req.body.password;
+        const password = md5(req.body.password);
 
         const user = await secretsServices.checkUser(email);
 
