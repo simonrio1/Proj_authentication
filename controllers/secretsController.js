@@ -1,5 +1,7 @@
 const secretsServices = require("../services/secretsServices");
-const md5 = require("md5");
+// const md5 = require("md5"); Lvl 3
+const bcrypt = require('bcrypt');
+const saltRounds = 10;
 
 exports.getHomePage = (req, res) => {
     res.render("home");
@@ -27,9 +29,12 @@ exports.logout = (req, res) => {
 
 exports.register = async (req, res) => {
     try {
+        const hash_password = await bcrypt.hash(req.body.password, saltRounds);
+
         const newUser = {
             email: req.body.username,
-            password: md5(req.body.password)
+            // password: md5(req.body.password) Level 3
+            password: hash_password
         };
         const user = await secretsServices.registerUser(newUser);
         res.redirect("/secrets");
@@ -42,12 +47,14 @@ exports.login = async (req, res) => {
     try {
 
         const email = req.body.username;
-        const password = md5(req.body.password);
+        // const password = md5(req.body.password); Level 3
 
         const user = await secretsServices.checkUser(email);
 
         if (user) {
-            if (user.password === password) {
+            const match = await bcrypt.compare(req.body.password, user.password);
+            // if (user.password === password) { Level 3
+            if (match) {
                 res.redirect("/secrets");
             } else {
                 console.log("wrong password");
