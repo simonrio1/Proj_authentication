@@ -24,6 +24,6 @@ router.route("/secrets").get(getSecretsPage);
 
 router.route("/submit").get(getSubmitPage).post(submitSecret);
 
-router.route("/logout").get(logout);
+router.route("/logout").post(logout);
 
 module.exports = router;
