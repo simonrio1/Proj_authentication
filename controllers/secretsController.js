@@ -1,9 +1,5 @@
-// const secretsServices = require("../services/secretsServices");
 const User = require("../models/user");
 const passport = require("passport");
-// const md5 = require("md5"); Lvl 3
-const bcrypt = require('bcrypt');
-const saltRounds = 10;
 
 exports.getHomePage = (req, res) => {
     res.render("home");
@@ -11,7 +7,6 @@ exports.getHomePage = (req, res) => {
 
 exports.getRegisterPage = (req, res) => {
     if (req.isAuthenticated()) {
-        console.log("Already authenticated");
         res.redirect("/secrets");
     } else {
         res.render("register");
@@ -20,26 +15,30 @@ exports.getRegisterPage = (req, res) => {
 
 exports.getLoginPage = (req, res) => {
     if (req.isAuthenticated()) {
-        console.log("Already authenticated");
         res.redirect("/secrets");
     } else {
         res.render("login");
     }
 }
 
-exports.getSecretsPage = (req, res) => {
+exports.getSecretsPage = async (req, res) => {
     if (req.isAuthenticated()) {
-        console.log(req.user);
-        res.render("secrets");
+        const users = await User.find({secrets: { $exists: true, $ne: [] }}, "secrets");
+        let secrets = users.map(user => user.secrets);
+        secrets = secrets.flat();
+
+        res.render("secrets", {secrets: secrets});
     } else {
-        console.log(req.user);
-        console.log("not authenticated");
         res.redirect("/login");
     }
 }
 
 exports.getSubmitPage = (req, res) => {
-    res.render("submit");
+    if (req.isAuthenticated()) {
+        res.render("submit");
+    } else {
+        res.redirect("/login");
+    }
 }
 
 exports.logout = (req, res) => {
@@ -52,7 +51,7 @@ exports.logout = (req, res) => {
     });
 }
 
-exports.register = async (req, res) => {
+exports.register = (req, res) => {
     User.register({ username: req.body.username }, req.body.password, (err) => {
         if (err) {
             console.log('error while user register!', err);
@@ -60,7 +59,6 @@ exports.register = async (req, res) => {
         } else {
             console.log('user registered!');
             passport.authenticate("local", { failureRedirect: '/login', failureMessage: true })(req, res, () => {
-                console.log(req.user);
                 res.redirect('/secrets');
             });
 
@@ -86,6 +84,23 @@ exports.login = (req, res) => {
     });
 }
 
-exports.submitSecret = (req, res) => {
-    res.redirect("/secrets");
+exports.submitSecret = async (req, res) => {
+    try {
+        const secret = req.body.secret;
+        let userSecrets = req.user.secrets;
+        userSecrets.push(secret);
+        const user = await User.findByIdAndUpdate(req.user._id, { $set: { secrets: userSecrets }});
+        res.redirect("/secrets");
+    } catch (err) {
+        res.json(err);
+    }
+    
 }
+
+exports.authenticateWithGoogle = passport.authenticate('google', { scope: ['profile'] });
+
+exports.authenticateWithGoogleCallback = passport.authenticate('google', { failureRedirect: '/login', successRedirect: '/secrets'});
+
+exports.authenticateWithFacebook = passport.authenticate('facebook');
+
+exports.authenticateWithFacebookCallback = passport.authenticate('facebook', { failureRedirect: '/login', successRedirect: '/secrets'});
